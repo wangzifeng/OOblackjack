@@ -1,13 +1,17 @@
 # blackjack, object oriented version
 #
 class Player
-  attr_accessor :name, :wins, :losses, :stake, :hands
-  def initialize(name)
+  attr_accessor :name, :wins, :losses, :stake, :hands, :dealer, :bet, :winnings
+  def initialize(name, dealer = false)
     @name = name
+    @dealer = dealer
     @hands = {}
     @wins = 0
     @losses = 0
     @stake = 0
+    @stake = 50 unless dealer
+    @bet = 0
+    @winnings = 0
   end
   def hands
     @hands
@@ -15,15 +19,17 @@ class Player
   def update_hand(key, hand)
     #insert a new Hand into the player's hash
     @hands[key]=hand
+    @bet += hand.hand_bet
   end
 end
 
 
 class Deck
-  attr_accessor :name, :hand_status
+  attr_accessor :name, :hand_status, :hand_bet
   def initialize(packs = 1)
     @name = "Deck"
     @hand_status = "in progress"
+    @hand_bet = 0
     @cards = []
     add_packs(packs)
   end
@@ -62,10 +68,16 @@ class Deck
     
     if score[0] > 21
       player.losses = player.losses + 1
+      player.bet -= self.hand_bet
+      player.stake -= self.hand_bet
+      player.winnings -= self.hand_bet
       puts
       self.hand_status = "#{player.name}, you busted!  Sorry!"
     elsif score[0] == 21 && card_count == 2
       player.wins = player.wins + 1
+      player.bet -= self.hand_bet
+      player.stake += self.hand_bet
+      player.winnings += self.hand_bet
       puts 
       self.hand_status = "#{player.name}, you got Blackjack! Congrats!" 
     else
@@ -77,16 +89,26 @@ class Deck
     my_score = self.score[0] 
     his_score = dealer_hand.score[0] 
     if my_score == his_score
+      player.bet -= self.hand_bet
       self.hand_status = "Same score, hand is a tie!"
     elsif his_score > 21
       player.wins = player.wins + 1
+      player.bet -= self.hand_bet
+      player.stake += self.hand_bet
+      player.winnings += self.hand_bet
       self.hand_status = "#{player.name}, dealer has busted!  You win! Congrats!"
       
     elsif his_score > my_score
       player.losses = player.losses + 1
+      player.bet -= self.hand_bet
+      player.stake -= self.hand_bet
+      player.winnings -= self.hand_bet
       self.hand_status = "Sorry, dealer has a better hand!"
     else
       player.wins = player.wins + 1
+      player.bet -= self.hand_bet
+      player.stake += self.hand_bet
+      player.winnings += self.hand_bet
       self.hand_status = "#{player.name}, you have the better hand! You win! Congrats!"
     end
   end
@@ -130,8 +152,10 @@ end
 
 
 class Hand < Deck
-  def initialize(name)
+  attr_accessor :name, :hand_bet
+  def initialize(name, bet)
     @name = name
+    @hand_bet = bet
     @hand_status = "in progress"
     @cards = []
   end
@@ -186,7 +210,7 @@ class Blackjack
     @heroes = []
     collect_players
     self.mydeck = Deck.new(4)
-    self.dealer = Hand.new("Dealer")
+    self.dealer = Hand.new("Dealer",0)
     want_to_play = true
     while want_to_play
       introduce_table
@@ -228,8 +252,9 @@ class Blackjack
       puts "What's your name?"
       name = gets.chomp.downcase.capitalize
       puts 
-      puts "Nice to meet you, #{name}!"
       self.heroes << Player.new(name)
+      puts "Nice to meet you, #{name}! You have #{self.heroes.last.stake} beans."
+      
       puts ""
       collecting_players = false if choose_option("Enter another player?",["Y","N"],"Y") == "N"
     end
@@ -237,42 +262,87 @@ class Blackjack
 
   def introduce_table
     # puts all the player names out - plus we have a chance to throw away old hands
+    # and we collect bets
     puts
     print "Ok, sitting around the table we have "
     prefix = ""
     self.heroes.each do |our_hero|
-      print "#{prefix}#{our_hero.name}"
+      print "#{prefix}#{our_hero.name} with #{our_hero.stake} beans"
       our_hero.hands = {}
+      our_hero.bet = 0
       prefix = ", "
     end
     puts "."
     puts " "
     puts "Let's play some Blackjack!"
+    puts
     sleep(3)
+  end
+  def get_bets(our_hero)
+    if our_hero.stake == 0
+      puts
+      puts "Skipping #{our_hero.name}... no beans to bet with!"
+      puts
+      this_bet = 0
+    else
+      need_bet = true
+      while need_bet
+         puts "How much do you want to bet, #{our_hero.name}?"
+        while ( this_bet = gets.chomp ) != this_bet.to_i.to_s
+          puts "I just need a number, #{our_hero.name}... or enter '0' to pass."
+          puts
+          puts "How much do you want to bet, #{our_hero.name}?"
+        end
+        if this_bet.to_i > our_hero.stake
+          puts "You can't bet that much!! You only have #{our_hero.stake} beans."
+          puts
+        else
+          need_bet = false
+        end
+      end
+    end
+    this_bet.to_i
   end
 
   def initial_deal
-    self.mydeck = Deck.new(4)
-    self.dealer = Hand.new("Dealer")
     self.heroes.each do |our_hero|
-      our_hero.update_hand(0, Hand.new(our_hero.name)) #create one initial hand per player
+      his_bet = get_bets(our_hero)
+      our_hero.update_hand(0, Hand.new(our_hero.name,his_bet)) if his_bet != 0 #create one initial hand per player
     end
 
     self.heroes.each do |our_hero|
-        self.mydeck.deal(our_hero.hands[0]) # deal one card around table 
+      our_hero.hands.each_pair do |pointer, hand|
+        self.mydeck.deal(hand) # deal one card around table 
+      end
     end
 
     self.mydeck.deal(self.dealer, "hide") #deal to dealer, face down
 
     self.heroes.each do |our_hero|
-        self.mydeck.deal(our_hero.hands[0]) #deal second card around table
+      our_hero.hands.each_pair do |pointer, hand|
+        self.mydeck.deal(hand) # deal second card around table 
+      end
     end
     self.mydeck.deal (self.dealer) # dealer's second card
+  end
+  def ok_to_split?(hand, player)
+    if hand.cards[0].value == hand.cards[1].value
+      if (player.stake - player.bet) < hand.hand_bet
+        puts "#{player.name}, you have matching values BUT you only have #{player.stake - player.bet} beans left."
+        puts "I can't offer you the option to split your hand. :("
+        puts 
+        false
+      else
+        true
+      end 
+    else
+      false
+    end
   end
 
   def players_turns
     # following Hand instance is local to the method, we use it to throw away cards
-    discard = Hand.new("discarded") 
+    discard = Hand.new("discarded",0) 
     self.heroes.each do |our_hero|
     # output who's turn
       puts "." * 80
@@ -295,7 +365,7 @@ class Blackjack
             self.mydeck.deal(hand)
           end  
           # check for split
-          if hand.cards[0].value == hand.cards[1].value 
+          if ok_to_split?(hand,our_hero)
             lucky_wink_wink = false # this prevents us splitting "Lucky" indefinitely
             hand.show_hand
             if choose_option("Two cards are same value. Do you want to split?",["Y","N"],"Y") == "Y"
@@ -303,7 +373,9 @@ class Blackjack
               # change hand name from "John" to "John's hand # 1"
               our_hero.hands[0].name = our_hero.name + "'s hand # 1"
               # create a new hand
-              temp_hand[new_number] = Hand.new(our_hero.name + "'s hand # #{new_number + 1}")
+              temp_hand[new_number] = Hand.new(our_hero.name + "'s hand # #{new_number + 1}", hand.hand_bet)
+              # increase player bet
+              our_hero.bet += hand.hand_bet
               # deal a card from the old Hand ot the new Hand
               hand.deal(temp_hand[new_number])
               # flag that we'll need to loop again to add missing cards 
@@ -373,7 +445,8 @@ def final_results
         puts "    " + hand.hand_status
       end
     end
-    puts "    So far, #{our_hero.name} has won #{our_hero.wins} and lost #{our_hero.losses}"
+    puts "    So far, #{our_hero.name} has won #{our_hero.wins} games and lost #{our_hero.losses} games."
+    puts "    Winnings are #{our_hero.winnings} beans, current assets are #{our_hero.stake} beans."
     puts
     sleep(5)
   end
