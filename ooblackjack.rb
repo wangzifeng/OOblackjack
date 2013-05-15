@@ -437,9 +437,7 @@ def final_results
   self.heroes.each do |our_hero|
     puts "#{our_hero.name}..."
     our_hero.hands.each_pair do |pointer, hand|
-      if our_hero.name == hand.name
-        puts "#{hand.name}..."
-      else
+      if our_hero.name != hand.name
         puts "  #{hand.name}..."
       end
       if hand.hand_status == "in progress" 
