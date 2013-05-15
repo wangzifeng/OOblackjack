@@ -347,8 +347,7 @@ class Blackjack
   def players_turns
     # following Hand instance is local to the method, we use it to throw away cards
     discard = Hand.new("discarded",0) 
-    selected_heroes = self.heroes.select{|my_hero| my_hero.bet !=0 }
-    selected_heroes.each do |our_hero| 
+    self.heroes.select{|our_hero| our_hero.bet !=0 }.each do |our_hero|
       # output who's turn
       puts "." * 80
       puts "#{our_hero.name}'s turn".center(80)
@@ -403,6 +402,7 @@ class Blackjack
           result = hand.blackjack_or_bust(our_hero) 
           if result
             puts result 
+            sleep(2)
             break 
           end 
           if choose_option("#{our_hero.name}, would you like to HIT, or STAND?",["H","S"],"H") == "H"
