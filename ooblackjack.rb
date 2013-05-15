@@ -287,6 +287,7 @@ class Blackjack
     else
       need_bet = true
       while need_bet
+         puts
          puts "How much do you want to bet, #{our_hero.name}?"
         while ( this_bet = gets.chomp ) != this_bet.to_i.to_s
           puts "I just need a number, #{our_hero.name}... or enter '0' to pass."
@@ -295,6 +296,9 @@ class Blackjack
         end
         if this_bet.to_i > our_hero.stake
           puts "You can't bet that much!! You only have #{our_hero.stake} beans."
+          puts
+        elsif this_bet.to_i < 0
+          puts "Betting a negative amount?  Naughty, naughty!"
           puts
         else
           need_bet = false
@@ -343,8 +347,9 @@ class Blackjack
   def players_turns
     # following Hand instance is local to the method, we use it to throw away cards
     discard = Hand.new("discarded",0) 
-    self.heroes.each do |our_hero|
-    # output who's turn
+    selected_heroes = self.heroes.select{|my_hero| my_hero.bet !=0 }
+    selected_heroes.each do |our_hero| 
+      # output who's turn
       puts "." * 80
       puts "#{our_hero.name}'s turn".center(80)
       puts "." * 80
@@ -436,9 +441,14 @@ def final_results
   # check each player's hands against dealer
   self.heroes.each do |our_hero|
     puts "#{our_hero.name}..."
+    if our_hero.hands == {}
+      puts "  didn't play this turn"
+    end
     our_hero.hands.each_pair do |pointer, hand|
       if our_hero.name != hand.name
         puts "  #{hand.name}..."
+      else
+        puts "  last hand..."
       end
       if hand.hand_status == "in progress" 
         # check to see if we won or lost
@@ -449,7 +459,11 @@ def final_results
       end
     end
     puts "----So far, #{our_hero.name} has won #{our_hero.wins} games and lost #{our_hero.losses} games."
-    puts "----Winnings are #{our_hero.winnings} beans, current assets are #{our_hero.stake} beans."
+    if our_hero.winnings >= 0
+      puts "----Winnings are #{our_hero.winnings} beans, current assets are #{our_hero.stake} beans."
+    else
+      puts "----Losses are #{our_hero.winnings.abs} beans, current assets are #{our_hero.stake} beans."
+    end
     puts
     sleep(5)
   end
