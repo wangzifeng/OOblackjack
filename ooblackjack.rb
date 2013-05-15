@@ -435,8 +435,13 @@ def final_results
   puts "." * 80
   # check each player's hands against dealer
   self.heroes.each do |our_hero|
+    puts "#{our_hero.name}..."
     our_hero.hands.each_pair do |pointer, hand|
-      puts "#{hand.name}..."
+      if our_hero.name == hand.name
+        puts "#{hand.name}..."
+      else
+        puts "  #{hand.name}..."
+      end
       if hand.hand_status == "in progress" 
         # check to see if we won or lost
         puts "    " + hand.beat(self.dealer,our_hero)
@@ -445,8 +450,8 @@ def final_results
         puts "    " + hand.hand_status
       end
     end
-    puts "    So far, #{our_hero.name} has won #{our_hero.wins} games and lost #{our_hero.losses} games."
-    puts "    Winnings are #{our_hero.winnings} beans, current assets are #{our_hero.stake} beans."
+    puts "----So far, #{our_hero.name} has won #{our_hero.wins} games and lost #{our_hero.losses} games."
+    puts "----Winnings are #{our_hero.winnings} beans, current assets are #{our_hero.stake} beans."
     puts
     sleep(5)
   end
