@@ -365,8 +365,6 @@ class Blackjack
               our_hero.hands[0].name = our_hero.name + "'s hand # 1"
               # create a new hand
               temp_hand[new_number] = Hand.new(our_hero.name + "'s hand # #{new_number + 1}", hand.hand_bet)
-              # increase player bet
-              our_hero.bet += hand.hand_bet
               # deal a card from the old Hand ot the new Hand
               hand.deal(temp_hand[new_number])
               # flag that we'll need to loop again to add missing cards 
