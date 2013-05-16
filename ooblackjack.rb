@@ -1,5 +1,6 @@
 # blackjack, object oriented version
 #
+require 'yaml'
 class Player
   attr_accessor :name, :wins, :losses, :stake, :hands, :dealer, :bet, :winnings
   def initialize(name, dealer = false)
@@ -211,6 +212,10 @@ class Blackjack
     collect_players
     self.mydeck = Deck.new(4)
     self.dealer = Hand.new("Dealer",0)
+    play
+  end
+
+  def play
     want_to_play = true
     while want_to_play
       introduce_table
@@ -221,26 +226,8 @@ class Blackjack
       want_to_play = false if choose_option("End Game?",["Y","N"],"Y") == "Y"
     end
   end
-  def choose_option(message, choices, default)
-    # general method to prompt for input from user
-    # choices is array of valid entries, default is used if user Enters
-    option = nil
-    until option
-      puts
-      print message + " " + choices.to_s
-      print " (default is \"#{default}\")" unless default == nil
-      puts
-      option = gets.chomp.upcase[0]
-      option = default if option == nil
-      unless choices.include?(option)
-        puts 
-        puts "\"#{option}\" is not a valid choice, please try again"
-        option = nil
-      end
-    end
-    sleep(1)
-    option
-  end
+
+  
   def collect_players
     #we get all the players names, create Player objexts
     puts
@@ -469,4 +456,47 @@ def final_results
   end
 end
 end
-game = Blackjack.new
+def choose_option(message, choices, default = nil)
+  # general method to prompt for input from user
+  # choices is array of valid entries, default is used if user Enters
+  option = nil
+  until option
+    puts
+    print message + " " + choices.to_s
+    print " (default is \"#{default}\")" unless default == nil
+    puts
+    option = gets.chomp.upcase[0]
+    option = default if option == nil
+    unless choices.include?(option)
+      puts 
+      if option == nil
+        puts "You need to enter a choice! Please try again"
+      else
+        puts "\"#{option}\" is not a valid choice, please try again"
+      end
+      option = nil
+    end
+  end
+  sleep(1)
+  option
+end
+
+file_name = "saved_blackjack_game.txt"
+if File.exist?(file_name) &&  choose_option("Do you want to restore saved game?", ["Y","N"]) == "Y" 
+  game = YAML::load(File.read(file_name))
+end
+
+if game != nil
+  game.play
+else
+  game = Blackjack.new
+end
+
+if choose_option("Do you want to save game?", ["Y","N"]) == "Y" 
+  save_game = game.to_yaml
+  File.open(file_name, 'w') do |save_file|
+    save_file.write save_game
+  end
+else
+  File.delete(file_name) if File.exist?(file_name) 
+end
